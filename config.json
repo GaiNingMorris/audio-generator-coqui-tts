@@ -1,0 +1,122 @@
+{
+    "app": {
+        "name": "Audio Generator - Coqui TTS",
+        "version": "1.0.0",
+        "description": "A web-based text-to-speech audio generator using Coqui TTS",
+        "port": 5000,
+        "host": "0.0.0.0",
+        "debug": true
+    },
+    "tts": {
+        "default_model": "tts_models/en/ljspeech/tacotron2-DDC",
+        "device": "auto",
+        "max_text_length": 1000,
+        "supported_formats": [
+            "wav",
+            "mp3"
+        ],
+        "default_format": "wav"
+    },
+    "audio": {
+        "sample_rate": 22050,
+        "channels": 1,
+        "bit_depth": 16,
+        "quality": "high"
+    },
+    "models": {
+        "english": [
+            {
+                "name": "LJSpeech Tacotron2",
+                "id": "tts_models/en/ljspeech/tacotron2-DDC",
+                "description": "High-quality single speaker English model",
+                "speakers": 1,
+                "languages": [
+                    "en"
+                ]
+            },
+            {
+                "name": "VCTK VITS",
+                "id": "tts_models/en/vctk/vits",
+                "description": "Multi-speaker English model with various accents",
+                "speakers": 109,
+                "languages": [
+                    "en"
+                ]
+            }
+        ],
+        "multilingual": [
+            {
+                "name": "Bark (Highest Quality)",
+                "id": "tts_models/multilingual/multi-dataset/bark",
+                "description": "Most natural human-like speech with emotions and sound effects",
+                "speakers": "multiple",
+                "languages": [
+                    "en",
+                    "es",
+                    "fr",
+                    "de",
+                    "it",
+                    "pt",
+                    "pl",
+                    "ru",
+                    "zh",
+                    "ja",
+                    "hi",
+                    "tr"
+                ]
+            },
+            {
+                "name": "YourTTS",
+                "id": "tts_models/multilingual/multi-dataset/your_tts",
+                "description": "Zero-shot multi-speaker multilingual model",
+                "speakers": "variable",
+                "languages": [
+                    "en",
+                    "fr",
+                    "pt"
+                ]
+            },
+            {
+                "name": "XTTS v2",
+                "id": "tts_models/multilingual/multi-dataset/xtts_v2",
+                "description": "Multilingual voice cloning model",
+                "speakers": "cloneable",
+                "languages": [
+                    "en",
+                    "es",
+                    "fr",
+                    "de",
+                    "it",
+                    "pt",
+                    "pl",
+                    "tr",
+                    "ru",
+                    "nl",
+                    "cs",
+                    "ar",
+                    "zh",
+                    "ja"
+                ]
+            }
+        ]
+    },
+    "performance": {
+        "max_concurrent_requests": 5,
+        "request_timeout": 300,
+        "memory_limit_mb": 4096,
+        "cpu_threads": 4
+    },
+    "cleanup": {
+        "enabled": true,
+        "interval_hours": 24,
+        "max_files": 100,
+        "max_age_hours": 48
+    },
+    "logging": {
+        "level": "INFO",
+        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        "file": "app.log",
+        "max_size_mb": 10,
+        "backup_count": 5
+    }
+}
