@@ -186,6 +186,130 @@ class OpenVoiceService:
             traceback.print_exc()
             raise
     
+    def generate_long_form(self, text, output_path, speaker_wav=None, language='en', speed=1.0, chunk_size=1000):
+        """
+        Generate audio for long text by splitting into chunks
+        
+        This method automatically splits long text into manageable chunks,
+        generates audio for each chunk, and concatenates them into one file.
+        
+        Args:
+            text: Long text to synthesize
+            output_path: Path to save final output
+            speaker_wav: Optional path to reference audio for voice cloning
+            language: Language code (default: 'en')
+            speed: Speech speed multiplier (default: 1.0)
+            chunk_size: Maximum characters per chunk (default: 1000)
+            
+        Returns:
+            Path to generated audio file
+        """
+        try:
+            print(f"📚 Generating long-form audio with OpenVoice...")
+            print(f"   Total text length: {len(text)} characters")
+            
+            # Extract voice embedding once if cloning
+            target_se = None
+            if speaker_wav and os.path.exists(speaker_wav):
+                print("🎤 Extracting voice embedding (one-time)...")
+                target_se = self.extract_voice_embedding(speaker_wav)
+            
+            # Split text into chunks at sentence boundaries
+            import re
+            sentences = re.split(r'(?<=[.!?])\s+', text)
+            
+            chunks = []
+            current_chunk = ""
+            
+            for sentence in sentences:
+                if len(current_chunk) + len(sentence) <= chunk_size:
+                    current_chunk += sentence + " "
+                else:
+                    if current_chunk:
+                        chunks.append(current_chunk.strip())
+                    current_chunk = sentence + " "
+            
+            if current_chunk:
+                chunks.append(current_chunk.strip())
+            
+            print(f"   Split into {len(chunks)} chunks")
+            
+            # Generate audio for each chunk
+            from pydub import AudioSegment
+            audio_segments = []
+            
+            openvoice_language = self.LANGUAGE_MAP.get(language.lower(), 'English')
+            
+            for i, chunk in enumerate(chunks):
+                print(f"\n   📝 Chunk {i+1}/{len(chunks)}: {len(chunk)} chars")
+                
+                # Create temp files
+                with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_base:
+                    temp_base_path = temp_base.name
+                with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_final:
+                    temp_final_path = temp_final.name
+                
+                try:
+                    # Generate base audio
+                    print(f"      Generating base audio...")
+                    self.base_speaker_tts.tts(
+                        chunk,
+                        temp_base_path,
+                        speaker='default',
+                        language=openvoice_language,
+                        speed=speed
+                    )
+                    
+                    # Convert tone if cloning
+                    if target_se is not None:
+                        print(f"      Converting to cloned voice...")
+                        self.tone_color_converter.convert(
+                            audio_src_path=temp_base_path,
+                            src_se=self.source_se,
+                            tgt_se=target_se,
+                            output_path=temp_final_path,
+                            message="@MyShell"
+                        )
+                        audio_segments.append(AudioSegment.from_wav(temp_final_path))
+                    else:
+                        audio_segments.append(AudioSegment.from_wav(temp_base_path))
+                    
+                    print(f"      ✅ Chunk {i+1} complete")
+                    
+                finally:
+                    # Cleanup temp files
+                    for temp_path in [temp_base_path, temp_final_path]:
+                        if os.path.exists(temp_path):
+                            try:
+                                os.remove(temp_path)
+                            except:
+                                pass
+            
+            # Concatenate all chunks
+            print(f"\n🔗 Concatenating {len(audio_segments)} audio chunks...")
+            combined = audio_segments[0]
+            for segment in audio_segments[1:]:
+                combined += segment
+            
+            # Export final audio
+            combined.export(output_path, format="wav")
+            
+            duration = len(combined) / 1000.0  # milliseconds to seconds
+            file_size = os.path.getsize(output_path) / 1024  # bytes to KB
+            
+            print(f"\n✅ Long-form audio generated!")
+            print(f"   Output: {output_path}")
+            print(f"   Duration: {duration:.1f} seconds")
+            print(f"   Size: {file_size:.1f} KB")
+            
+            return output_path
+            
+        except Exception as e:
+            print(f"❌ Failed to generate long-form audio: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
+    
     def get_model_info(self):
         """Get OpenVoice model information"""
         return {

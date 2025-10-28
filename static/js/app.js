@@ -341,6 +341,8 @@ function loadFormData() {
             speedInput.value = data.speed || 1.0;
             updateCharCount();
             updateSpeedValue();
+            // Trigger model data load to update UI after restoring selection
+            loadModelData();
         } catch (error) {
             console.error('Error loading saved form data:', error);
         }

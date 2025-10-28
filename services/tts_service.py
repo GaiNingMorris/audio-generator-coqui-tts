@@ -158,14 +158,25 @@ class TTSService:
                     if not language:
                         language = 'en'
                     
-                    # Generate audio with OpenVoice
-                    openvoice.generate_audio(
-                        text=text,
-                        output_path=output_path,
-                        speaker_wav=speaker_wav,
-                        language=language,
-                        speed=speed
-                    )
+                    # Determine if text is long and needs splitting
+                    if len(text) > 1000:
+                        logger.info(f"Long text detected ({len(text)} chars), using long-form generation")
+                        openvoice.generate_long_form(
+                            text=text,
+                            output_path=output_path,
+                            speaker_wav=speaker_wav,
+                            language=language,
+                            speed=speed
+                        )
+                    else:
+                        # Generate audio with OpenVoice
+                        openvoice.generate_audio(
+                            text=text,
+                            output_path=output_path,
+                            speaker_wav=speaker_wav,
+                            language=language,
+                            speed=speed
+                        )
                     
                     logger.info(f"OpenVoice audio generated successfully: {output_path}")
                     return True, output_path, None
