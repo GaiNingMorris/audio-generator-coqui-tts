@@ -15,6 +15,14 @@ except Exception as e:
     logger.warning(f"OpenVoice not available: {e}")
     OPENVOICE_AVAILABLE = False
 
+# Import Bark service
+try:
+    from services.bark_service import get_bark_service
+    BARK_AVAILABLE = True
+except Exception as e:
+    logger.warning(f"Bark not available: {e}")
+    BARK_AVAILABLE = False
+
 class TTSService:
     """Service class for handling Text-to-Speech operations using Coqui TTS."""
     
@@ -84,6 +92,58 @@ class TTSService:
             # Use default model if none specified
             if not model_name:
                 model_name = self.default_model
+            
+            # Check if Bark model is requested
+            if model_name == 'bark' or model_name == 'tts_models/multilingual/bark':
+                if not BARK_AVAILABLE:
+                    return False, "", "Bark is not available"
+                
+                try:
+                    logger.info("Using Bark for generation")
+                    bark = get_bark_service()
+                    
+                    # Use default language if not specified
+                    if not language:
+                        language = 'en'
+                    
+                    # Extract speaker number from "Speaker X" format
+                    bark_speaker = None
+                    if speaker:
+                        if speaker.startswith("Speaker "):
+                            # Extract number from "Speaker 0", "Speaker 1", etc.
+                            bark_speaker = int(speaker.replace("Speaker ", ""))
+                        else:
+                            # Direct number provided
+                            try:
+                                bark_speaker = int(speaker)
+                            except:
+                                bark_speaker = None
+                    
+                    # Determine if text is long and needs splitting
+                    if len(text) > 250:
+                        logger.info(f"Long text detected ({len(text)} chars), using long-form generation")
+                        bark.generate_long_form(
+                            text=text,
+                            output_path=output_path,
+                            voice_preset=bark_speaker,
+                            language=language
+                        )
+                    else:
+                        # Generate audio with Bark
+                        bark.generate_audio(
+                            text=text,
+                            output_path=output_path,
+                            voice_preset=bark_speaker,
+                            language=language
+                        )
+                    
+                    logger.info(f"Bark audio generated successfully: {output_path}")
+                    return True, output_path, None
+                    
+                except Exception as e:
+                    error_msg = f"Bark generation error: {str(e)}"
+                    logger.error(error_msg)
+                    return False, "", error_msg
             
             # Check if OpenVoice model is requested
             if model_name == 'openvoice' or model_name == 'tts_models/multilingual/openvoice':
@@ -194,46 +254,37 @@ class TTSService:
     def get_available_models(self) -> List[str]:
         """Get list of available TTS models."""
         try:
-            # Get models from TTS manager
+            # Only keep Bark and OpenVoice models
             models = []
             
-            # Common English models
-            english_models = [
-                "tts_models/en/ljspeech/tacotron2-DDC",
-                "tts_models/en/ljspeech/tacotron2-DCA",
-                "tts_models/en/ljspeech/glow-tts",
-                "tts_models/en/ljspeech/speedy-speech",
-                "tts_models/en/ljspeech/neural_hmm",
-                "tts_models/en/vctk/vits",
-                "tts_models/en/vctk/fast_pitch",
-                "tts_models/en/sam/tacotron-DDC",
-                "tts_models/en/blizzard2013/capacitron-t2-c50",
-                "tts_models/en/blizzard2013/capacitron-t2-c150_v2"
-            ]
+            # Add Bark if available (with emotional tags support)
+            if BARK_AVAILABLE:
+                models.append("tts_models/multilingual/bark")
             
-            # Multi-language models
-            multilingual_models = [
-                "tts_models/multilingual/multi-dataset/bark",  # Highest quality
-                "tts_models/multilingual/multi-dataset/your_tts",
-                "tts_models/multilingual/multi-dataset/xtts_v2"
-            ]
-            
-            # Add OpenVoice if available
+            # Add OpenVoice if available (voice cloning)
             if OPENVOICE_AVAILABLE:
-                multilingual_models.insert(0, "tts_models/multilingual/openvoice")  # Add at top
-            
-            models.extend(english_models)
-            models.extend(multilingual_models)
+                models.append("tts_models/multilingual/openvoice")
             
             return models
             
         except Exception as e:
             logger.error(f"Error getting available models: {str(e)}")
-            return [self.default_model]
+            # Return empty list if both unavailable
+            return []
     
     def get_speakers(self, model_name: str) -> List[str]:
         """Get available speakers for a specific model."""
         try:
+            # Handle Bark model
+            if model_name == 'bark' or model_name == 'tts_models/multilingual/bark':
+                # Bark has voice presets (0-9 for each language)
+                return [f"Speaker {i}" for i in range(10)]
+            
+            # Handle OpenVoice model
+            if model_name == 'openvoice' or model_name == 'tts_models/multilingual/openvoice':
+                # OpenVoice uses voice cloning, no preset speakers
+                return []
+            
             # Load model if different from current
             if not self._load_model(model_name):
                 return []
@@ -250,6 +301,14 @@ class TTSService:
     def get_languages(self, model_name: str) -> List[str]:
         """Get available languages for a specific model."""
         try:
+            # Handle Bark model - English only
+            if model_name == 'bark' or model_name == 'tts_models/multilingual/bark':
+                return ['en']
+            
+            # Handle OpenVoice model - English only
+            if model_name == 'openvoice' or model_name == 'tts_models/multilingual/openvoice':
+                return ['en']
+            
             # Load model if different from current
             if not self._load_model(model_name):
                 return ['en']

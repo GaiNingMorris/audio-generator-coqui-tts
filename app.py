@@ -132,7 +132,7 @@ def get_models():
         logger.error(f"Error getting models: {str(e)}")
         return jsonify({'error': 'Error fetching models'}), 500
 
-@app.route('/speakers/<model_name>')
+@app.route('/speakers/<path:model_name>')
 def get_speakers(model_name):
     """Get available speakers for a specific model."""
     try:
@@ -142,7 +142,7 @@ def get_speakers(model_name):
         logger.error(f"Error getting speakers for model {model_name}: {str(e)}")
         return jsonify({'error': 'Error fetching speakers'}), 500
 
-@app.route('/languages/<model_name>')
+@app.route('/languages/<path:model_name>')
 def get_languages(model_name):
     """Get available languages for a specific model."""
     try:

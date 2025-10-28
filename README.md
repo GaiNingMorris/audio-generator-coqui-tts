@@ -62,6 +62,8 @@ A modern web-based text-to-speech application powered by Coqui TTS that converts
    ./run.sh
    ```
    
+   lsof -ti:5000 | xargs kill -9
+   
    **Option B: Manual activation (single command)**
    ```bash
    source venv/bin/activate && python app.py
